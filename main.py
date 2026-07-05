@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 
 from chunking import split_into_chunks
-from db import async_session
+from db import  tenant_session
 from embed import embed_texts
 from models import Chunk, Document
 from llm import generate_answer
@@ -28,7 +28,7 @@ async def create_tenant(request: TenantSignupRequest):
     raw_key = generate_api_key()
     api_key_hash = hash_api_key(raw_key)
 
-    async with async_session() as session:
+    async with tenant_session(tenant_id) as session:
         tenant = Tenant(name=request.name, api_key_hash=api_key_hash)
         session.add(tenant)
         await session.commit()
@@ -60,7 +60,7 @@ async def query_documents(request: QueryRequest, tenant: Tenant = Depends(get_cu
 async def upload_document(request: UploadRequest, tenant: Tenant = Depends(get_current_tenant)):
     content_hash = hashlib.sha256(request.content.encode()).hexdigest()
 
-    async with async_session() as session:
+    async with tenant_session(tenant.id) as session:
         existing = await session.scalar(
             select(Document).where(
                 Document.content_hash == content_hash,
