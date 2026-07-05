@@ -8,6 +8,8 @@ from chunking import split_into_chunks
 from db import async_session
 from embed import embed_texts
 from models import Chunk, Document
+from llm import generate_answer
+from retrieval import retrieve_relevant_chunks
 
 app = FastAPI()
 
@@ -15,6 +17,19 @@ app = FastAPI()
 class UploadRequest(BaseModel):
     filename: str
     content: str
+
+
+
+class QueryRequest(BaseModel):
+    question: str
+
+
+@app.post("/query")
+async def query_documents(request: QueryRequest):
+    chunks = await retrieve_relevant_chunks(request.question)
+    answer = generate_answer(request.question, chunks)
+    return {"answer": answer, "chunks_used": chunks}
+
 
 
 @app.post("/documents")
@@ -47,3 +62,4 @@ async def upload_document(request: UploadRequest):
         await session.commit()
 
     return {"document_id": document.id, "num_chunks": len(chunks_text)}
+
