@@ -1,23 +1,24 @@
-import hashlib
-
-from fastapi import FastAPI
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import select
 
-from chunking import split_into_chunks
-from db import  tenant_session
-from embed import embed_texts
-from models import Chunk, Document
-from llm import generate_answer
-from retrieval import retrieve_relevant_chunks
-from auth import generate_api_key, hash_api_key
-from models import Tenant
-from fastapi import Depends, FastAPI
 from auth import generate_api_key, hash_api_key, get_current_tenant
-from models import Chunk, Document, Tenant
-
+from db import async_session, tenant_session
+from ingestion import process_document
+from llm import generate_answer
+from models import IngestionJob, JobStatus, Tenant
+from retrieval import retrieve_relevant_chunks
 
 app = FastAPI()
+
+
+class UploadRequest(BaseModel):
+    filename: str
+    content: str
+
+
+class QueryRequest(BaseModel):
+    question: str
+
 
 class TenantSignupRequest(BaseModel):
     name: str
@@ -28,7 +29,7 @@ async def create_tenant(request: TenantSignupRequest):
     raw_key = generate_api_key()
     api_key_hash = hash_api_key(raw_key)
 
-    async with tenant_session(tenant_id) as session:
+    async with async_session() as session:
         tenant = Tenant(name=request.name, api_key_hash=api_key_hash)
         session.add(tenant)
         await session.commit()
@@ -36,16 +37,38 @@ async def create_tenant(request: TenantSignupRequest):
     return {"tenant_id": tenant.id, "api_key": raw_key}
 
 
+@app.post("/documents", status_code=202)
+async def upload_document(
+    request: UploadRequest,
+    background_tasks: BackgroundTasks,
+    tenant: Tenant = Depends(get_current_tenant),
+):
+    async with tenant_session(tenant.id) as session:
+        job = IngestionJob(tenant_id=tenant.id, status=JobStatus.pending)
+        session.add(job)
+        await session.commit()
+
+    background_tasks.add_task(
+        process_document, job.id, tenant.id, request.filename, request.content
+    )
+
+    return {"job_id": job.id, "status": job.status}
 
 
-class UploadRequest(BaseModel):
-    filename: str
-    content: str
+@app.get("/jobs/{job_id}")
+async def get_job_status(job_id: int, tenant: Tenant = Depends(get_current_tenant)):
+    async with tenant_session(tenant.id) as session:
+        job = await session.get(IngestionJob, job_id)
 
+    if job is None or job.tenant_id != tenant.id:
+        raise HTTPException(status_code=404, detail="Job not found")
 
-
-class QueryRequest(BaseModel):
-    question: str
+    return {
+        "job_id": job.id,
+        "status": job.status,
+        "document_id": job.document_id,
+        "error_message": job.error_message,
+    }
 
 
 @app.post("/query")
@@ -53,39 +76,3 @@ async def query_documents(request: QueryRequest, tenant: Tenant = Depends(get_cu
     chunks = await retrieve_relevant_chunks(request.question, tenant_id=tenant.id)
     answer = generate_answer(request.question, chunks)
     return {"answer": answer, "chunks_used": chunks}
-
-
-
-@app.post("/documents")
-async def upload_document(request: UploadRequest, tenant: Tenant = Depends(get_current_tenant)):
-    content_hash = hashlib.sha256(request.content.encode()).hexdigest()
-
-    async with tenant_session(tenant.id) as session:
-        existing = await session.scalar(
-            select(Document).where(
-                Document.content_hash == content_hash,
-                Document.tenant_id == tenant.id,
-            )
-        )
-        if existing is not None:
-            return {"document_id": existing.id, "message": "document already uploaded"}
-
-        chunks_text = split_into_chunks(request.content)
-        embeddings = embed_texts(chunks_text)
-
-        document = Document(tenant_id=tenant.id, filename=request.filename, content_hash=content_hash)
-        session.add(document)
-        await session.flush()
-
-        for index, (chunk_text, embedding) in enumerate(zip(chunks_text, embeddings)):
-            chunk = Chunk(
-                document_id=document.id,
-                chunk_index=index,
-                content=chunk_text,
-                embedding=embedding,
-            )
-            session.add(chunk)
-
-        await session.commit()
-
-    return {"document_id": document.id, "num_chunks": len(chunks_text)}
