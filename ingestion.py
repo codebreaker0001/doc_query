@@ -1,14 +1,20 @@
 import hashlib
 
+import structlog
 from sqlalchemy import select
 
+from cache import invalidate_tenant_cache
 from chunking import split_into_chunks
 from db import tenant_session
 from embed import embed_texts
+from logging_config import logger
 from models import Chunk, Document, IngestionJob, JobStatus
-from cache import invalidate_tenant_cache
 
-async def process_document(job_id: int, tenant_id: int, filename: str, content: str):
+
+async def process_document(job_id: int, tenant_id: int, filename: str, content: str, request_id: str):
+    structlog.contextvars.bind_contextvars(request_id=request_id)
+    logger.info("processing_started", job_id=job_id, tenant_id=tenant_id)
+
     async with tenant_session(tenant_id) as session:
         job = await session.get(IngestionJob, job_id)
         job.status = JobStatus.processing
@@ -29,6 +35,7 @@ async def process_document(job_id: int, tenant_id: int, filename: str, content: 
                 job.status = JobStatus.done
                 job.document_id = existing.id
                 await session.commit()
+                logger.info("processing_skipped_duplicate", job_id=job_id, document_id=existing.id)
                 return
 
             chunks_text = split_into_chunks(content)
@@ -51,8 +58,10 @@ async def process_document(job_id: int, tenant_id: int, filename: str, content: 
             job.status = JobStatus.done
             job.document_id = document.id
             await session.commit()
+
             await invalidate_tenant_cache(tenant_id)
 
+        logger.info("processing_finished", job_id=job_id, document_id=document.id, num_chunks=len(chunks_text))
 
     except Exception as e:
         async with tenant_session(tenant_id) as session:
@@ -60,3 +69,7 @@ async def process_document(job_id: int, tenant_id: int, filename: str, content: 
             job.status = JobStatus.failed
             job.error_message = str(e)
             await session.commit()
+
+        logger.error("processing_failed", job_id=job_id, error=str(e))
+    finally:
+        structlog.contextvars.clear_contextvars()

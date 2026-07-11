@@ -1,15 +1,42 @@
-from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException
+import uuid
+
+import structlog
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request
 from pydantic import BaseModel
 
-from auth import generate_api_key, hash_api_key, get_current_tenant , get_rate_limited_tenant
+from auth import generate_api_key, hash_api_key, get_current_tenant, get_rate_limited_tenant
+from cache import get_cached_answer, set_cached_answer
 from db import async_session, tenant_session
 from ingestion import process_document
 from llm import generate_answer
+from logging_config import configure_logging, logger
 from models import IngestionJob, JobStatus, Tenant
 from retrieval import retrieve_relevant_chunks
-from cache import invalidate_tenant_cache, get_cached_answer, set_cached_answer, _cache_key
+from fastapi.middleware.cors import CORSMiddleware
+configure_logging()
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.middleware("http")
+async def add_request_id(request: Request, call_next):
+    request_id = str(uuid.uuid4())
+    request.state.request_id = request_id
+    structlog.contextvars.bind_contextvars(request_id=request_id)
+
+    logger.info("request_started", method=request.method, path=request.url.path)
+    response = await call_next(request)
+    logger.info("request_finished", status_code=response.status_code)
+
+    structlog.contextvars.clear_contextvars()
+    return response
 
 
 class UploadRequest(BaseModel):
@@ -35,12 +62,14 @@ async def create_tenant(request: TenantSignupRequest):
         session.add(tenant)
         await session.commit()
 
+    logger.info("tenant_created", tenant_id=tenant.id)
     return {"tenant_id": tenant.id, "api_key": raw_key}
 
 
 @app.post("/documents", status_code=202)
 async def upload_document(
     request: UploadRequest,
+    http_request: Request,
     background_tasks: BackgroundTasks,
     tenant: Tenant = Depends(get_rate_limited_tenant),
 ):
@@ -49,8 +78,15 @@ async def upload_document(
         session.add(job)
         await session.commit()
 
+    logger.info("job_created", job_id=job.id, tenant_id=tenant.id)
+
     background_tasks.add_task(
-        process_document, job.id, tenant.id, request.filename, request.content
+        process_document,
+        job.id,
+        tenant.id,
+        request.filename,
+        request.content,
+        http_request.state.request_id,
     )
 
     return {"job_id": job.id, "status": job.status}
@@ -76,7 +112,10 @@ async def get_job_status(job_id: int, tenant: Tenant = Depends(get_current_tenan
 async def query_documents(request: QueryRequest, tenant: Tenant = Depends(get_rate_limited_tenant)):
     cached = await get_cached_answer(tenant.id, request.question)
     if cached is not None:
+        logger.info("query_cache_hit", tenant_id=tenant.id)
         return {**cached, "cached": True}
+
+    logger.info("query_cache_miss", tenant_id=tenant.id)
 
     chunks = await retrieve_relevant_chunks(request.question, tenant_id=tenant.id)
     answer = generate_answer(request.question, chunks)

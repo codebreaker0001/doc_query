@@ -4,7 +4,7 @@ from fastapi import HTTPException
 
 from redis_client import redis_client
 
-RATE_LIMIT = 3  # max requests allowed per window
+RATE_LIMIT = 30  # max requests allowed per window
 WINDOW_SECONDS = 60
 
 
