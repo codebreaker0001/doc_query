@@ -6,7 +6,7 @@ from chunking import split_into_chunks
 from db import tenant_session
 from embed import embed_texts
 from models import Chunk, Document, IngestionJob, JobStatus
-
+from cache import invalidate_tenant_cache
 
 async def process_document(job_id: int, tenant_id: int, filename: str, content: str):
     async with tenant_session(tenant_id) as session:
@@ -51,6 +51,8 @@ async def process_document(job_id: int, tenant_id: int, filename: str, content: 
             job.status = JobStatus.done
             job.document_id = document.id
             await session.commit()
+            await invalidate_tenant_cache(tenant_id)
+
 
     except Exception as e:
         async with tenant_session(tenant_id) as session:

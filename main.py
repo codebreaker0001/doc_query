@@ -1,12 +1,13 @@
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException
 from pydantic import BaseModel
 
-from auth import generate_api_key, hash_api_key, get_current_tenant
+from auth import generate_api_key, hash_api_key, get_current_tenant , get_rate_limited_tenant
 from db import async_session, tenant_session
 from ingestion import process_document
 from llm import generate_answer
 from models import IngestionJob, JobStatus, Tenant
 from retrieval import retrieve_relevant_chunks
+from cache import invalidate_tenant_cache, get_cached_answer, set_cached_answer, _cache_key
 
 app = FastAPI()
 
@@ -41,7 +42,7 @@ async def create_tenant(request: TenantSignupRequest):
 async def upload_document(
     request: UploadRequest,
     background_tasks: BackgroundTasks,
-    tenant: Tenant = Depends(get_current_tenant),
+    tenant: Tenant = Depends(get_rate_limited_tenant),
 ):
     async with tenant_session(tenant.id) as session:
         job = IngestionJob(tenant_id=tenant.id, status=JobStatus.pending)
@@ -72,7 +73,15 @@ async def get_job_status(job_id: int, tenant: Tenant = Depends(get_current_tenan
 
 
 @app.post("/query")
-async def query_documents(request: QueryRequest, tenant: Tenant = Depends(get_current_tenant)):
+async def query_documents(request: QueryRequest, tenant: Tenant = Depends(get_rate_limited_tenant)):
+    cached = await get_cached_answer(tenant.id, request.question)
+    if cached is not None:
+        return {**cached, "cached": True}
+
     chunks = await retrieve_relevant_chunks(request.question, tenant_id=tenant.id)
     answer = generate_answer(request.question, chunks)
-    return {"answer": answer, "chunks_used": chunks}
+    result = {"answer": answer, "chunks_used": chunks}
+
+    await set_cached_answer(tenant.id, request.question, result)
+
+    return {**result, "cached": False}
