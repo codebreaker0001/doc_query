@@ -1,18 +1,19 @@
 import os
-import subprocess
-import sys
+import threading
 import uuid
 from contextlib import asynccontextmanager
 
 import structlog
 from fastapi import Depends, FastAPI, File, HTTPException, Request , UploadFile
 from pydantic import BaseModel, field_validator
+from rq.worker import SimpleWorker
+from rq.timeouts import TimerDeathPenalty
 
 from auth import generate_api_key, hash_api_key, get_current_tenant, get_rate_limited_tenant
 from cache import get_cached_answer, set_cached_answer
 from db import async_session, tenant_session
 from ingestion import process_document_sync
-from job_queue import job_queue
+from job_queue import job_queue, redis_conn
 from llm import generate_answer
 from logging_config import configure_logging, logger
 from models import IngestionJob, JobStatus, Tenant , Document
@@ -26,21 +27,36 @@ configure_logging()
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024  # 20MB
 
 
+class ThreadWorker(SimpleWorker):
+    # signal.signal() only works in the main thread of the main interpreter.
+    # This worker runs in a background thread, so (1) skip signal-based
+    # shutdown entirely -- it's a daemon thread, it just dies with the
+    # process -- and (2) use RQ's thread-safe TimerDeathPenalty (threading
+    # .Timer-based) for per-job timeouts instead of the default
+    # UnixSignalDeathPenalty, which also calls signal.signal() and crashes
+    # every job the same way.
+    death_penalty_class = TimerDeathPenalty
+
+    def _install_signal_handlers(self):
+        pass
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Render's free tier has no separate worker process. When enabled, spawn
-    # worker.py as a real subprocess instead -- NOT a thread. A thread would
-    # share this process's async DB engine/connection pool with the worker's
-    # own event loop running in a different OS thread; SQLAlchemy's async
-    # layer bridges to the DB driver via greenlets, which aren't safe to
-    # resume from a different thread than the one that created them, and
-    # that caused jobs to hang indefinitely. A subprocess gets its own
-    # Python interpreter and its own independent db.py module instance, so
-    # there's nothing shared to corrupt.
-    worker_process = None
+    # Render's free tier has no separate worker process, and a subprocess
+    # worker loads a second full copy of torch/transformers in memory --
+    # too much for the 512MB free-tier limit. A thread shares this process's
+    # memory (one copy of the models), which is why we're back to this
+    # despite the earlier hang -- that was caused by the DB engine pooling
+    # connections across event loops in different threads, fixed now via
+    # NullPool in db.py (see the comment there), not by avoiding threads.
     if os.environ.get("ENABLE_EMBEDDED_WORKER") == "true":
-        worker_process = subprocess.Popen([sys.executable, "worker.py"])
-        logger.info("embedded_worker_started", pid=worker_process.pid)
+        thread = threading.Thread(
+            target=lambda: ThreadWorker([job_queue], connection=redis_conn).work(),
+            daemon=True,
+        )
+        thread.start()
+        logger.info("embedded_worker_started")
     yield
     if worker_process:
         worker_process.terminate()
