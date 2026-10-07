@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 
 import structlog
@@ -11,7 +12,7 @@ from logging_config import logger
 from models import Chunk, Document, IngestionJob, JobStatus
 
 
-async def process_document(job_id: int, tenant_id: int, filename: str, content: str, request_id: str):
+async def process_document(job_id: int, tenant_id: int, filename: str, pages: list[str], request_id: str):
     structlog.contextvars.bind_contextvars(request_id=request_id)
     logger.info("processing_started", job_id=job_id, tenant_id=tenant_id)
 
@@ -21,8 +22,8 @@ async def process_document(job_id: int, tenant_id: int, filename: str, content: 
         await session.commit()
 
     try:
-        content_hash = hashlib.sha256(content.encode()).hexdigest()
-
+        full_text = "\n\n".join(pages)
+        content_hash = hashlib.sha256(full_text.encode()).hexdigest()
         async with tenant_session(tenant_id) as session:
             existing = await session.scalar(
                 select(Document).where(
@@ -38,21 +39,24 @@ async def process_document(job_id: int, tenant_id: int, filename: str, content: 
                 logger.info("processing_skipped_duplicate", job_id=job_id, document_id=existing.id)
                 return
 
-            chunks_text = split_into_chunks(content)
+            chunks = split_into_chunks(pages)
+            chunks_text = [chunk["text"] for chunk in chunks]
             embeddings = embed_texts(chunks_text)
 
             document = Document(tenant_id=tenant_id, filename=filename, content_hash=content_hash)
             session.add(document)
             await session.flush()
-
-            for index, (chunk_text, embedding) in enumerate(zip(chunks_text, embeddings)):
-                chunk = Chunk(
+            
+            for index, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
+                chunk_row = Chunk(
                     document_id=document.id,
                     chunk_index=index,
-                    content=chunk_text,
+                    content=chunk["text"],
+                    page=chunk["page"],
                     embedding=embedding,
                 )
-                session.add(chunk)
+                session.add(chunk_row)
+
 
             job = await session.get(IngestionJob, job_id)
             job.status = JobStatus.done
@@ -73,3 +77,24 @@ async def process_document(job_id: int, tenant_id: int, filename: str, content: 
         logger.error("processing_failed", job_id=job_id, error=str(e))
     finally:
         structlog.contextvars.clear_contextvars()
+
+
+def process_document_sync(job_id: int, tenant_id: int, filename: str, pages: list[str], request_id: str):
+    """RQ workers call sync functions; this is the entry point the queue enqueues."""
+    from db import engine
+    from redis_client import redis_client
+
+    async def run():
+        try:
+            await process_document(job_id, tenant_id, filename, pages, request_id)
+        finally:
+            # Each call gets its own event loop via asyncio.run(). Both the
+            # DB engine and the Redis client are module-level singletons
+            # whose pooled connections are bound to *this* loop, so both
+            # must be reset before it shuts down -- otherwise the next job's
+            # fresh loop inherits dead connections and fails with
+            # "Event loop is closed".
+            await engine.dispose()
+            await redis_client.connection_pool.disconnect()
+
+    asyncio.run(run())

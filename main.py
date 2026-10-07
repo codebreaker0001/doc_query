@@ -1,19 +1,25 @@
 import uuid
 
 import structlog
-from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request
-from pydantic import BaseModel
+from fastapi import Depends, FastAPI, File, HTTPException, Request , UploadFile
+from pydantic import BaseModel, field_validator
 
 from auth import generate_api_key, hash_api_key, get_current_tenant, get_rate_limited_tenant
 from cache import get_cached_answer, set_cached_answer
 from db import async_session, tenant_session
-from ingestion import process_document
+from ingestion import process_document_sync
+from job_queue import job_queue
 from llm import generate_answer
 from logging_config import configure_logging, logger
-from models import IngestionJob, JobStatus, Tenant
+from models import IngestionJob, JobStatus, Tenant , Document
 from retrieval import retrieve_relevant_chunks
+from pdf_extraction import extract_pages_from_pdf
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import select
 configure_logging()
+
+MAX_UPLOAD_BYTES = 20 * 1024 * 1024  # 20MB
+
 
 app = FastAPI()
 
@@ -39,13 +45,12 @@ async def add_request_id(request: Request, call_next):
     return response
 
 
-class UploadRequest(BaseModel):
-    filename: str
-    content: str
+
 
 
 class QueryRequest(BaseModel):
     question: str
+    document_id: int | None = None
 
 
 class TenantSignupRequest(BaseModel):
@@ -68,11 +73,24 @@ async def create_tenant(request: TenantSignupRequest):
 
 @app.post("/documents", status_code=202)
 async def upload_document(
-    request: UploadRequest,
     http_request: Request,
-    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
     tenant: Tenant = Depends(get_rate_limited_tenant),
+
 ):
+    if file.content_type != "application/pdf":
+        raise HTTPException(status_code=400, detail="Only PDF files are supported")
+
+    content_length = http_request.headers.get("content-length")
+    if content_length and int(content_length) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="File too large (max 20MB)")
+
+    file_bytes = await file.read()
+    pages = extract_pages_from_pdf(file_bytes)
+
+    if not any(page.strip() for page in pages):
+        raise HTTPException(status_code=400, detail="PDF contains no extractable text")
+
     async with tenant_session(tenant.id) as session:
         job = IngestionJob(tenant_id=tenant.id, status=JobStatus.pending)
         session.add(job)
@@ -80,17 +98,12 @@ async def upload_document(
 
     logger.info("job_created", job_id=job.id, tenant_id=tenant.id)
 
-    background_tasks.add_task(
-        process_document,
-        job.id,
-        tenant.id,
-        request.filename,
-        request.content,
-        http_request.state.request_id,
+    job_queue.enqueue(
+        process_document_sync, job.id, tenant.id, file.filename, pages, http_request.state.request_id
     )
 
-    return {"job_id": job.id, "status": job.status}
 
+    return {"job_id": job.id, "status": job.status, "filename": file.filename}
 
 @app.get("/jobs/{job_id}")
 async def get_job_status(job_id: int, tenant: Tenant = Depends(get_current_tenant)):
@@ -110,17 +123,26 @@ async def get_job_status(job_id: int, tenant: Tenant = Depends(get_current_tenan
 
 @app.post("/query")
 async def query_documents(request: QueryRequest, tenant: Tenant = Depends(get_rate_limited_tenant)):
-    cached = await get_cached_answer(tenant.id, request.question)
+    cached = await get_cached_answer(tenant.id, request.question, request.document_id)
     if cached is not None:
         logger.info("query_cache_hit", tenant_id=tenant.id)
         return {**cached, "cached": True}
 
     logger.info("query_cache_miss", tenant_id=tenant.id)
 
-    chunks = await retrieve_relevant_chunks(request.question, tenant_id=tenant.id)
+    chunks = await retrieve_relevant_chunks(request.question, tenant_id=tenant.id, document_id=request.document_id)
     answer = generate_answer(request.question, chunks)
     result = {"answer": answer, "chunks_used": chunks}
 
-    await set_cached_answer(tenant.id, request.question, result)
+    await set_cached_answer(tenant.id, request.question, result, request.document_id)
 
     return {**result, "cached": False}
+
+
+@app.get("/documents")
+async def list_documents(tenant: Tenant = Depends(get_current_tenant)):
+    async with tenant_session(tenant.id) as session:
+        documents = (await session.execute(
+            select(Document).where(Document.tenant_id == tenant.id).order_by(Document.created_at.desc())
+        )).scalars().all()
+    return [{"id": doc.id, "filename": doc.filename} for doc in documents]

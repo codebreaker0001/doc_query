@@ -8,9 +8,13 @@ function App() {
   const [tenantId, setTenantId] = useState(null)
   const [tenantName, setTenantName] = useState('')
   const [manualKeyInput, setManualKeyInput] = useState('')
+  const [showKeyReveal, setShowKeyReveal] = useState(false)
+  const [copied, setCopied] = useState(false)
 
-  const [uploadFilename, setUploadFilename] = useState('')
-  const [uploadContent, setUploadContent] = useState('')
+  const [selectedFile, setSelectedFile] = useState(null)
+  const [documents, setDocuments] = useState([])
+  const [selectedDocumentId, setSelectedDocumentId] = useState('')
+
   const [jobId, setJobId] = useState(null)
   const [jobStatus, setJobStatus] = useState(null)
   const [documentId, setDocumentId] = useState(null)
@@ -30,6 +34,7 @@ function App() {
     setApiKey(data.api_key)
     setTenantId(data.tenant_id)
     localStorage.setItem('apiKey', data.api_key)
+    setShowKeyReveal(true)
   }
 
   function handleUseExistingKey() {
@@ -40,25 +45,44 @@ function App() {
   function handleLogout() {
     setApiKey('')
     localStorage.removeItem('apiKey')
+    setShowKeyReveal(false)
+  }
+
+  function handleCopyKey() {
+    navigator.clipboard.writeText(apiKey)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
   async function handleUpload() {
-    setJobStatus(null)
-    setDocumentId(null)
-    setJobError(null)
+  if (!selectedFile) return
 
-    const response = await fetch(`${API_BASE}/documents`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-API-Key': apiKey,
-      },
-      body: JSON.stringify({ filename: uploadFilename || 'untitled.txt', content: uploadContent }),
-    })
-    const data = await response.json()
-    setJobId(data.job_id)
-    setJobStatus(data.status)
+  setJobStatus(null)
+  setDocumentId(null)
+  setJobError(null)
+
+  const formData = new FormData()
+  formData.append('file', selectedFile)
+
+  const response = await fetch(`${API_BASE}/documents`, {
+    method: 'POST',
+    headers: {
+      'X-API-Key': apiKey,
+    },
+    body: formData,
+  })
+  const data = await response.json()
+
+  if (!response.ok) {
+    setJobError(data.detail || 'Upload failed')
+    return
   }
+
+  setJobId(data.job_id)
+  setJobStatus(data.status)
+}
+
+
 
   useEffect(() => {
     if (!jobId || jobStatus === 'done' || jobStatus === 'failed') {
@@ -73,10 +97,31 @@ function App() {
       setJobStatus(data.status)
       setDocumentId(data.document_id)
       setJobError(data.error_message)
+      if (data.status === 'done') {
+        refreshDocuments()
+      }
+
     }, 1500)
 
     return () => clearInterval(intervalId)
   }, [jobId, jobStatus, apiKey])
+
+    async function refreshDocuments() {
+      const response = await fetch(`${API_BASE}/documents`, {
+        headers: { 'X-API-Key': apiKey },
+      })
+      if (!response.ok) {
+        setDocuments([])
+        return
+      }
+      const data = await response.json()
+      setDocuments(data)
+    }
+
+    useEffect(() => {
+      if (apiKey) refreshDocuments()
+    }, [apiKey])
+
 
   async function handleQuery() {
     if (!question.trim()) return
@@ -91,7 +136,11 @@ function App() {
         'Content-Type': 'application/json',
         'X-API-Key': apiKey,
       },
-      body: JSON.stringify({ question: currentQuestion }),
+      body: JSON.stringify({
+      question: currentQuestion,
+      document_id: selectedDocumentId ? Number(selectedDocumentId) : null,
+    }),
+
     })
     const data = await response.json()
 
@@ -103,109 +152,144 @@ function App() {
   }
 
   return (
-    <div className="app">
-      <h1>repo-qa-service</h1>
+    <div className="app-shell">
+      <aside className="sidebar">
+        <div className="brand">repo-qa-service</div>
 
-      {!apiKey ? (
-        <div className="card">
-          <h2>Get started</h2>
-
-          <div className="form-row">
-            <input
-              type="text"
-              placeholder="Tenant name (e.g. my-project)"
-              value={tenantName}
-              onChange={(e) => setTenantName(e.target.value)}
-            />
-            <button onClick={handleCreateTenant}>Create New Tenant</button>
-          </div>
-
-          <p className="divider">Already have an API key?</p>
-
-          <div className="form-row">
-            <input
-              type="text"
-              placeholder="Paste your API key"
-              value={manualKeyInput}
-              onChange={(e) => setManualKeyInput(e.target.value)}
-            />
-            <button onClick={handleUseExistingKey}>Use This Key</button>
-          </div>
-        </div>
-      ) : (
-        <>
-          <div className="card">
-            <p>Signed in with API key: <code>{apiKey.slice(0, 12)}...</code></p>
-            {tenantId && <p>Tenant ID: {tenantId}</p>}
-            <button onClick={handleLogout}>Log out</button>
-          </div>
-
-          <div className="card">
-            <h2>Upload a document</h2>
-            <div className="form-row">
+        {!apiKey ? (
+          <div className="panel">
+            <h2>Get started</h2>
+            <div className="form-col">
               <input
                 type="text"
-                placeholder="Filename"
-                value={uploadFilename}
-                onChange={(e) => setUploadFilename(e.target.value)}
+                placeholder="Tenant name (e.g. my-project)"
+                value={tenantName}
+                onChange={(e) => setTenantName(e.target.value)}
               />
+              <button onClick={handleCreateTenant}>Create New Tenant</button>
             </div>
-            <textarea
-              placeholder="Paste document text here..."
-              value={uploadContent}
-              onChange={(e) => setUploadContent(e.target.value)}
-              rows={6}
-            />
-            <button onClick={handleUpload}>Upload</button>
-
-            {jobStatus && (
-              <p className="job-status">
-                Job #{jobId}: <strong>{jobStatus}</strong>
-                {documentId && ` — document ID ${documentId}`}
-                {jobError && ` — error: ${jobError}`}
-              </p>
-            )}
-          </div>
-
-          <div className="card">
-            <h2>Ask a question</h2>
-            <div className="form-row">
+            <p className="divider">or</p>
+            <div className="form-col">
               <input
                 type="text"
-                placeholder="Ask something about your uploaded documents..."
-                value={question}
-                onChange={(e) => setQuestion(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleQuery()}
+                placeholder="Paste your API key"
+                value={manualKeyInput}
+                onChange={(e) => setManualKeyInput(e.target.value)}
               />
-              <button onClick={handleQuery} disabled={isAsking}>
-                {isAsking ? 'Asking...' : 'Ask'}
-              </button>
+              <button className="secondary" onClick={handleUseExistingKey}>Use Existing Key</button>
+            </div>
+          </div>
+        ) : showKeyReveal ? (
+          <div className="panel">
+            <h2>Save your API key</h2>
+            <p>This is the only time you'll see the full key — it can't be shown again. Copy it somewhere safe.</p>
+            <code className="key-reveal">{apiKey}</code>
+            <div className="form-col">
+              <button onClick={handleCopyKey}>{copied ? 'Copied!' : 'Copy key'}</button>
+              <button className="secondary" onClick={() => setShowKeyReveal(false)}>I've saved it, continue</button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="panel">
+              <div className="tenant-info">
+                <span className="label">API Key</span>
+                <code>{apiKey.slice(0, 12)}...</code>
+                {tenantId && (
+                  <>
+                    <span className="label">Tenant</span>
+                    <span>{tenantId}</span>
+                  </>
+                )}
+              </div>
+              <button className="secondary small" onClick={handleLogout}>Log out</button>
             </div>
 
-            <div className="conversation">
+            <div className="panel">
+              <h2>Upload document</h2>
+              <div className="form-col">
+                <input
+                  type="file"
+                  accept="application/pdf"
+                  onChange={(e) => setSelectedFile(e.target.files[0] || null)}
+                />
+                <button onClick={handleUpload} disabled={!selectedFile}>Upload</button>
+              </div>
+              {(jobStatus || jobError) && (
+                <p className={`job-status status-${jobStatus}`}>
+                  {jobStatus && `Job #${jobId}: ${jobStatus}`}
+                  {documentId && ` · doc ${documentId}`}
+                  {jobError && ` · ${jobError}`}
+                </p>
+              )}
+
+            </div>
+            <div className="panel">
+              <h2>Ask about</h2>
+              <select value={selectedDocumentId} onChange={(e) => setSelectedDocumentId(e.target.value)}>
+                <option value="">All documents</option>
+                {documents.map((doc) => (
+                  <option key={doc.id} value={doc.id}>{doc.filename}</option>
+                ))}
+              </select>
+            </div>
+
+
+          </>
+        )}
+      </aside>
+
+      <main className="main-panel">
+        {!apiKey ? (
+          <div className="empty-state">
+            <p>Sign in or create a tenant to get started</p>
+          </div>
+        ) : (
+          <>
+            <div className="chat-scroll">
+              {conversation.length === 0 && (
+                <div className="empty-state">
+                  <p>Upload a document, then ask a question about it</p>
+                </div>
+              )}
               {conversation.map((item, index) => (
                 <div key={index} className="qa-pair">
-                  <p className="question-text"><strong>Q:</strong> {item.question}</p>
-                  <p className="answer-text">
-                    <strong>A:</strong> {item.answer}
+                  <div className="bubble bubble-question">{item.question}</div>
+                  <div className="bubble bubble-answer">
+                    {item.answer}
                     {item.cached && <span className="cached-badge">cached</span>}
-                  </p>
-                  {item.chunks && item.chunks.length > 0 && (
-                    <details>
-                      <summary>Sources ({item.chunks.length})</summary>
-                      <ul>
-                        {item.chunks.map((chunk, i) => (
-                          <li key={i}>{chunk}</li>
-                        ))}
-                      </ul>
-                    </details>
-                  )}
+                    {item.chunks && item.chunks.length > 0 && (
+                      <details>
+                        <summary>Sources ({item.chunks.length})</summary>
+                        <ul>
+                          {item.chunks.map((chunk, i) => (
+                            <li key={i}>{chunk}</li>
+                          ))}
+                        </ul>
+                      </details>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
-          </div>
-        </>
-      )}
+
+            <div className="ask-bar">
+              <div className="ask-bar-inner">
+                <input
+                  type="text"
+                  placeholder="Ask something about your uploaded documents..."
+                  value={question}
+                  onChange={(e) => setQuestion(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleQuery()}
+                />
+                <button onClick={handleQuery} disabled={isAsking}>
+                  {isAsking ? 'Asking...' : 'Ask'}
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+      </main>
     </div>
   )
 }

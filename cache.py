@@ -6,21 +6,22 @@ from redis_client import redis_client
 CACHE_TTL_SECONDS = 3600  # 1 hour
 
 
-def _cache_key(tenant_id: int, question: str) -> str:
+def _cache_key(tenant_id: int, question: str, document_id: int | None = None) -> str:
     question_hash = hashlib.sha256(question.encode()).hexdigest()
-    return f"query_cache:{tenant_id}:{question_hash}"
+    scope = document_id if document_id is not None else "all"
+    return f"query_cache:{tenant_id}:{scope}:{question_hash}"
 
 
-async def get_cached_answer(tenant_id: int, question: str) -> dict | None:
-    key = _cache_key(tenant_id, question)
+async def get_cached_answer(tenant_id: int, question: str, document_id: int | None = None) -> dict | None:
+    key = _cache_key(tenant_id, question, document_id)
     cached = await redis_client.get(key)
     if cached is None:
         return None
     return json.loads(cached)
 
 
-async def set_cached_answer(tenant_id: int, question: str, result: dict):
-    key = _cache_key(tenant_id, question)
+async def set_cached_answer(tenant_id: int, question: str, result: dict, document_id: int | None = None):
+    key = _cache_key(tenant_id, question, document_id)
     await redis_client.set(key, json.dumps(result), ex=CACHE_TTL_SECONDS)
 
 

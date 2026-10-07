@@ -1,0 +1,138 @@
+{
+  "What is the main architectural innovation introduced in 'Attention Is All You Need'?": {
+    "evaluated_at": "2026-09-13T12:37:24.033203+00:00",
+    "metrics": {
+      "Contextual Precision": {
+        "score": 0.0,
+        "reason": "Every retrieved node is irrelevant: node 1 only lists page numbers and a figure caption unrelated to the Transformer architecture; node 2 discusses a dialogue/GAtt attention visualization; node 3 pertains to vision models, not the paper's main contribution. No relevant nodes are ranked above irrelevant ones."
+      },
+      "Contextual Recall": {
+        "score": 0.0,
+        "reason": "The expected sentence about the Transformer cannot be linked to any retrieved node; the nodes cover a numeric list/figure caption and attention visualizations/ViT models, not the Transformer as a sequence-transduction model based solely on attention."
+      },
+      "Contextual Relevancy": {
+        "score": 0.0,
+        "reason": "Every retrieved statement is irrelevant, e.g. one only mentions the publication venue and year; no statements address the main architectural innovation."
+      }
+    }
+  },
+  "What pretraining objectives does BERT use?": {
+    "evaluated_at": "2026-09-13T12:37:24.033203+00:00",
+    "metrics": {
+      "Contextual Precision": {
+        "score": 1.0,
+        "reason": "The relevant node at rank 1 includes 'NSP Mask LM' and 'Masked LM', directly covering BERT's pretraining objectives; ranks 2 and 3 don't specify those objectives, so relevant info is ranked highest."
+      },
+      "Contextual Recall": {
+        "score": 1.0,
+        "reason": "The expected sentence directly matches node 1, which explicitly describes Masked Language Modeling and Next Sentence Prediction."
+      },
+      "Contextual Relevancy": {
+        "score": 0.07,
+        "reason": "Almost all retrieved statements are unrelated (procedures/architecture reuse); only a single line directly answers the question (NSP and MLM objectives during pre-training)."
+      }
+    }
+  },
+  "How many parameters does the largest GPT-3 model have?": {
+    "evaluated_at": "2026-09-13T12:37:24.033203+00:00",
+    "metrics": {
+      "Contextual Precision": {
+        "score": 1.0,
+        "reason": "The first two nodes are directly relevant, noting '175 billion parameters' and 'largest single Transformer language model ... with 175B parameters'; the third node discusses win-rate without mentioning parameters, so relevant nodes rank above the irrelevant one."
+      },
+      "Contextual Recall": {
+        "score": 1.0,
+        "reason": "The expected sentence matches node 1 ('GPT-3 175B ... 175.0B') and node 2 ('with 175B parameters'), giving full support."
+      },
+      "Contextual Relevancy": {
+        "score": 0.17,
+        "reason": "Most retrieved statements only mention smaller variants (125M, 350M, 760M, 1.3B, 2.7B, etc.), which are irrelevant; only a few statements address the largest 175B model."
+      }
+    }
+  },
+  "What problem do ResNet's residual connections solve?": {
+    "evaluated_at": "2026-09-13T12:37:24.033203+00:00",
+    "metrics": {
+      "Contextual Precision": {
+        "score": 1.0,
+        "reason": "The top-ranked nodes all directly address the degradation/optimization problem that residual connections solve. No irrelevant nodes appear before relevant ones."
+      },
+      "Contextual Recall": {
+        "score": 1.0,
+        "reason": "The degradation-problem sentence is supported by node 3, and the residual/skip-connections sentence is backed by nodes 3 and 2, giving full coverage of the expected output."
+      },
+      "Contextual Relevancy": {
+        "score": 0.44,
+        "reason": "A few relevant points (easing optimization, faster convergence, degradation with depth) are present, but most retrieved statements are off-topic (layer response magnitudes, batch size/GPU details)."
+      }
+    }
+  },
+  "What are the key features of the Adam optimization algorithm?": {
+    "evaluated_at": "2026-09-13T12:37:24.033203+00:00",
+    "metrics": {
+      "Contextual Precision": {
+        "score": 1.0,
+        "reason": "Every retrieval node is relevant and occupies the top ranks: first-order gradient-based optimization, first/second moment estimate updates, and exponential moving averages of gradient/squared gradient. No irrelevant nodes push relevant ones down."
+      },
+      "Contextual Recall": {
+        "score": 1.0,
+        "reason": "The expected sentence aligns directly with node 1, which explicitly describes Adam as a first-order gradient-based optimizer using adaptive learning rates from moment estimates."
+      },
+      "Contextual Relevancy": {
+        "score": 0.72,
+        "reason": "Mixes relevant details (algorithm description, computational efficiency, invariance to gradient rescaling) with unrelated lines that only cite the paper venue/title."
+      }
+    }
+  },
+  "What does the Retrieval-Augmented Generation (RAG) paper combine?": {
+    "evaluated_at": "2026-09-13T12:37:24.033203+00:00",
+    "metrics": {
+      "Contextual Precision": {
+        "score": 1.0,
+        "reason": "All three nodes are relevant: hybrid generation models with parametric/non-parametric memory, a pretrained seq2seq generator with a dense vector index of Wikipedia as non-parametric memory. No irrelevant nodes outrank them."
+      },
+      "Contextual Recall": {
+        "score": 1.0,
+        "reason": "The expected sentence is directly supported by node 2, mentioning a pretrained seq2seq model and a dense vector Wikipedia index accessed via a learned retriever."
+      },
+      "Contextual Relevancy": {
+        "score": 0.27,
+        "reason": "Most retrieved statements don't address the question (memory 'human-readable'/'human-writable' properties, dialog usage); only a few sentences directly state the combination."
+      }
+    }
+  },
+  "What is the key idea behind LoRA for fine-tuning large language models?": {
+    "evaluated_at": "2026-09-13T12:37:24.033203+00:00",
+    "metrics": {
+      "Contextual Precision": {
+        "score": 1.0,
+        "reason": "The first node directly states the core concept (freezing pretrained weights, injecting trainable rank decomposition matrices), while ranks 2 and 3 are less relevant (experimental tables, unrelated models) and correctly placed lower."
+      },
+      "Contextual Recall": {
+        "score": 1.0,
+        "reason": "The expected sentence is directly supported by node 1, which explicitly mentions freezing pretrained weights and adding low-rank trainable matrices to each Transformer layer."
+      },
+      "Contextual Relevancy": {
+        "score": 0.35,
+        "reason": "Most retrieved statements are unrelated (general NLP paradigm discussion); only a single statement directly captures LoRA's core concept."
+      }
+    }
+  },
+  "What method does InstructGPT use to align language models with human intent?": {
+    "evaluated_at": "2026-09-13T12:37:24.033203+00:00",
+    "metrics": {
+      "Contextual Precision": {
+        "score": 1.0,
+        "reason": "All three retrieval-context nodes are relevant and correctly ranked at the top: labeler demonstrations + RLHF fine-tuning, reward model + PPO, and the full supervised-fine-tuning-then-RLHF pipeline. No irrelevant nodes pushed above relevant ones."
+      },
+      "Contextual Recall": {
+        "score": 1.0,
+        "reason": "The expected sentence is fully covered by node 1, which explicitly mentions supervised learning on labeler demonstrations and RLHF using a reward model trained on human rankings."
+      },
+      "Contextual Relevancy": {
+        "score": 0.48,
+        "reason": "Includes relevant statements about RLHF fine-tuning GPT-3 to follow instructions, but mixed with unrelated sentences about truthfulness improvements and contractor hiring/screening."
+      }
+    }
+  }
+}

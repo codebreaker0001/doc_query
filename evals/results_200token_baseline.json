@@ -1,0 +1,138 @@
+{
+  "What is the main architectural innovation introduced in 'Attention Is All You Need'?": {
+    "evaluated_at": "2026-09-13T13:48:20.522652+00:00",
+    "metrics": {
+      "Contextual Precision": {
+        "score": 0,
+        "reason": "The score is 0.00 because all three nodes are irrelevant: node\u202f1 contains unrelated bibliography entries (\"Diverse beam search...\", \"GLUE: A multi\u2011task benchmark...\"), node\u202f2 talks about axial attention and vision\u2011transformer variants without covering the core attention\u2011only architecture, and node\u202f3 mentions \"vanilla transformers\" but focuses on scaling and patch\u2011based models rather than the original paper's fully attention\u2011based Transformer. Since no relevant nodes appear at any rank, contextual precision cannot be higher."
+      },
+      "Contextual Recall": {
+        "score": 0.0,
+        "reason": "The score is 0.00 because sentence 1 describes the Transformer as a pure attention\u2011based sequence\u2011transduction model without recurrence or convolutions, and none of the retrieval nodes provide that definition."
+      },
+      "Contextual Relevancy": {
+        "score": 0.0,
+        "reason": "The score is 0.00 because every retrieved statement is unrelated to the question \u2013 e.g., it only gives a file path (\"aper/7181-attention-is-all-you-need.pdf\"), discusses axial attention, GLUE benchmark, or other models, and there is no statement that mentions the Transformer architecture introduced in 'Attention Is All You Need'."
+      }
+    }
+  },
+  "What pretraining objectives does BERT use?": {
+    "evaluated_at": "2026-09-13T13:48:39.111793+00:00",
+    "metrics": {
+      "Contextual Precision": {
+        "score": 0,
+        "reason": "The score is 0.00 because the first node (rank\u202f1) \u201cdoes not state the specific pre\u2011training objectives of Masked Language Modeling or Next Sentence Prediction,\u201d the second node (rank\u202f2) \u201cdoes not describe the pre\u2011training objectives (MLM or NSP),\u201d and the third node (rank\u202f3) \u201cdoes not mention the specific pre\u2011training objectives used by BERT.\u201d All three retrieved nodes are irrelevant, so no relevant nodes appear higher in the ranking."
+      },
+      "Contextual Recall": {
+        "score": 0.0,
+        "reason": "The score is 0.00 because none of the nodes in retrieval context mention masked language modeling or next sentence prediction, so the expected output cannot be attributed to any retrieval node."
+      },
+      "Contextual Relevancy": {
+        "score": 0.05555555555555555,
+        "reason": "The score is 0.06 because the majority of retrieved statements are unrelated to BERT's pretraining objectives (e.g., \"The statement only mentions a figure about procedures and does not specify any pretraining objectives used by BERT.\"), and the only vaguely relevant excerpt \u2013 \"ing and auto-encoder objectives have been used for pre\u2011training such models...\" \u2013 does not actually name BERT's specific objectives such as Masked Language Modeling or Next Sentence Prediction."
+      }
+    }
+  },
+  "How many parameters does the largest GPT-3 model have?": {
+    "evaluated_at": "2026-09-13T13:50:13.135395+00:00",
+    "metrics": {
+      "Contextual Precision": {
+        "score": 0.5833333333333333,
+        "reason": "The score is 0.58 because the first node (rank\u202f1) is irrelevant \u2013 it \u201cdiscusses scaling and capabilities of GPT\u20113 but does not provide any specific parameter count\u201d \u2013 and therefore appears before the two relevant nodes (ranks\u202f2 and\u202f3) that actually state \u201cGPT\u20113\u202f175B \u2026 175\u202fbillion parameters\u201d and mention the \u201c175\u202fbillion\u2011parameter GPT\u20113 model.\u201d Those relevant nodes are correctly ranked lower, which prevents a perfect score, but their presence after the irrelevant node still gives the system some credit, landing the contextual precision at 0.58."
+      },
+      "Contextual Recall": {
+        "score": 1.0,
+        "reason": "The score is 1.00 because the sole sentence \u201c175 billion parameters.\u201d is directly backed by node 2 in the retrieval context, which lists \u201cGPT-3 175B \u2026 175.0B\u201d, and there are no contradictory gaps."
+      },
+      "Contextual Relevancy": {
+        "score": 0.17647058823529413,
+        "reason": "The score is 0.18 because almost all listed reasons note that the context lacks the needed parameter count (e.g., it \"does not provide any information about the number of parameters of the largest GPT-3 model\"), and only a few statements actually mention the size\u2014namely \"GPT-3 175B\" and comparisons to 175B models\u2014so the relevant information is minimal compared to the largely irrelevant content."
+      }
+    }
+  },
+  "What problem do ResNet's residual connections solve?": {
+    "evaluated_at": "2026-09-13T13:51:23.333796+00:00",
+    "metrics": {
+      "Contextual Precision": {
+        "score": 1.0,
+        "reason": "The score is 1.00 because the first two nodes (ranks 1 and 2) are directly relevant \u2013 they cite the degradation problem that residual connections address (\"This indicates that the degradation problem is well\u2026\") \u2013 while the only irrelevant node (rank 3) merely mentions CLIP performance and provides no discussion of residual connections (\"The text only mentions 'CLIP\u2019s zero-shot performance\u2026'\"). All relevant nodes are ranked higher than the irrelevant one, yielding perfect contextual precision."
+      },
+      "Contextual Recall": {
+        "score": 1.0,
+        "reason": "Score 1.00 because sentence\u202f1 is covered by Node\u202f1 and Node\u202f2, and sentence\u202f2 is supported by Node\u202f1, fully aligning the expected output with the retrieval context."
+      },
+      "Contextual Relevancy": {
+        "score": 0.5454545454545454,
+        "reason": "The score is 0.55 because the context contains a few relevant hints about the problem\u2014e.g., \u201cThis indicates that the degradation problem is well addressed.\u201d\u2014but most retrieved statements only describe architecture details or performance and \u201cdo not explain the problem that residual connections are intended to solve,\u201d as the irrelevancy reasons note."
+      }
+    }
+  },
+  "What are the key features of the Adam optimization algorithm?": {
+    "evaluated_at": "2026-09-13T13:52:26.391182+00:00",
+    "metrics": {
+      "Contextual Precision": {
+        "score": 1.0,
+        "reason": "The score is 1.00 because the two relevant nodes (rank 1 and rank 2) appear before the irrelevant node (rank 3). Node 1 cites \"an algorithm for first-order gradient-based optimization\" and \"adaptive estimates of lower-order moments,\" directly covering the key features. Node 2 adds that the \"hyper-parameters have intuitive interpretations,\" further detailing Adam\u2019s design. The only irrelevant node, at rank 3, only mentions that \"Adam makes faster progress\" and compares performance, which does not describe the algorithm\u2019s fundamental features. Since all relevant information is ranked higher than the irrelevant content, the precision is perfect."
+      },
+      "Contextual Recall": {
+        "score": 1.0,
+        "reason": "The score is 1.00 because sentence\u202f1 is directly supported by node\u202f1 in the retrieval context, which mentions a first-order gradient\u2011based optimizer that uses adaptive estimates of lower\u2011order moments, exactly matching the described adaptive learning\u2011rate mechanism."
+      },
+      "Contextual Relevancy": {
+        "score": 0.5238095238095238,
+        "reason": "The score is 0.52 because the context contains useful statements about Adam\u2019s key features\u2014e.g., \"We introduce Adam, an algorithm for first-order gradient\u2011based optimization of stochastic objective functions, based on adaptive estimates of lower\u2011order moments.\" and \"The method is straightforward to implement, is computationally efficient, has little memory requirements, is invariant to diagonal rescaling of the gradients...\"\u2014but it is also filled with unrelated material such as publication details, e.g., \"The statement 'Published as a conference paper at ICLR 2015' only provides publication venue information and does not describe any feature of the Adam algorithm.\" This blend of relevant and irrelevant information leads to a moderate contextual relevancy score."
+      }
+    }
+  },
+  "What does the Retrieval-Augmented Generation (RAG) paper combine?": {
+    "evaluated_at": "2026-09-13T13:53:39.160735+00:00",
+    "metrics": {
+      "Contextual Precision": {
+        "score": 1.0,
+        "reason": "The score is 1.00 because the two relevant nodes (rank\u202f1 and rank\u202f2) contain quotes such as \"hybrid generation models with access to parametric and non\u2011parametric memory\" and \"the parametric memory is a pre\u2011trained seq2seq model and the non\u2011parametric memory is a dense vector index of Wikipedia, accessed with a pre\u2011trained neural retriever,\" while the only irrelevant node (rank\u202f3) appears later with \"using intermediate retrieval supervision, which RAG does not require.\" All relevant information is ranked above the irrelevant one, giving perfect contextual precision."
+      },
+      "Contextual Recall": {
+        "score": 1.0,
+        "reason": "The score is 1.00 because the sentence directly matches node 2 in the retrieval context, which describes a dense vector index of Wikipedia passages accessed with a learned retriever."
+      },
+      "Contextual Relevancy": {
+        "score": 0.3333333333333333,
+        "reason": "The score is 0.33 because most of the retrieved statements are off\u2011topic\u2014e.g., \"The statement focuses on performance results ('state of the art results on open-domain QA') which does not address what the RAG paper combines\"\u2014while only a few directly answer the question, such as \"We explore a general\u2011purpose fine\u2011tuning recipe for retrieval\u2011augmented generation (RAG) \u2014 models which combine pre\u2011trained parametric and non\u2011parametric memory for language generation.\" The dominance of irrelevant content drags the relevance down."
+      }
+    }
+  },
+  "What is the key idea behind LoRA for fine-tuning large language models?": {
+    "evaluated_at": "2026-09-13T13:54:56.753183+00:00",
+    "metrics": {
+      "Contextual Precision": {
+        "score": 1.0,
+        "reason": "The score is 1.00 because every retrieved node is relevant\u2014node\u202f1 says \u201cWe only train \u2026\u201d, node\u202f2 notes \u201conly a small set of parameters (the low\u2011rank matrices) are trained\u201d, and node\u202f3 highlights that LoRA \u201callows for quick task\u2011switching \u2026 by sharing the vast majority of the model parameters\u201d. There are no irrelevant nodes to be ranked above the relevant ones, so the ranking is perfect."
+      },
+      "Contextual Recall": {
+        "score": 1.0,
+        "reason": "The score is 1.00 because nodes\u202f1 and\u202f3 in the retrieval context explicitly describe freezing the pretrained weights and adding trainable low\u2011rank decomposition matrices to each Transformer layer, matching the expected sentence."
+      },
+      "Contextual Relevancy": {
+        "score": 0.6666666666666666,
+        "reason": "The score is 0.67 because the retrieval context mixes relevant points like \"We propose LoRA, an efficient adaptation strategy that neither introduces inference latency nor reduces input sequence length while retaining high model quality\" and \"Figure\u00a01 shows the re\u2011parameterization used by LoRA, where only a low\u2011rank decomposition of the weight updates is trained while the original pretrained weights remain frozen,\" with irrelevant material such as author names, affiliations, email addresses, cost/hardware challenges, and visualisation details that \"has nothing to do with the key idea behind LoRA for fine\u2011tuning large language models\"."
+      }
+    }
+  },
+  "What method does InstructGPT use to align language models with human intent?": {
+    "evaluated_at": "2026-09-13T13:56:03.736036+00:00",
+    "metrics": {
+      "Contextual Precision": {
+        "score": 1.0,
+        "reason": "The score is 1.00 because the relevant node (rank 1) includes a detailed answer \u2013 \"collect a dataset of labeler demonstrations...\" and \"collect a dataset of rankings...\" \u2013 while the later nodes (ranks 2 and 3) are irrelevant, noting they \"does not specify the two\u2011step method...\" and \"does not detail the supervised demonstration phase...\". The relevant information is ranked highest, so precision is perfect."
+      },
+      "Contextual Recall": {
+        "score": 1.0,
+        "reason": "The score is 1.00 because sentence 1 is directly covered by node 1 in the retrieval context, which describes both supervised fine\u2011tuning on human demonstrations and subsequent RLHF using a reward model trained on human rankings."
+      },
+      "Contextual Relevancy": {
+        "score": 0.42857142857142855,
+        "reason": "The score is 0.43 because while the context includes relevant statements like \"We show an avenue for aligning language models with user intent... by fine-tuning with human feedback\" and \"we use... reinforcement learning from human feedback\" that directly address the alignment method, many other statements (e.g., \"We call the resulting models InstructGPT\" and \"The statement discusses evaluation results... rather than the alignment method\") are unrelated to the question, lowering the overall relevance."
+      }
+    }
+  }
+}
