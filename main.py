@@ -1,3 +1,4 @@
+import os
 import uuid
 
 import structlog
@@ -15,6 +16,7 @@ from models import IngestionJob, JobStatus, Tenant , Document
 from retrieval import retrieve_relevant_chunks
 from pdf_extraction import extract_pages_from_pdf
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select
 configure_logging()
 
@@ -25,7 +27,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=os.environ.get("CORS_ORIGINS", "http://localhost:5173").split(","),
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -146,3 +148,11 @@ async def list_documents(tenant: Tenant = Depends(get_current_tenant)):
             select(Document).where(Document.tenant_id == tenant.id).order_by(Document.created_at.desc())
         )).scalars().all()
     return [{"id": doc.id, "filename": doc.filename} for doc in documents]
+
+
+# Serves the built frontend (frontend/dist) in production so one Docker
+# image + one Render service handles both API and UI, no CORS needed.
+# Mounted last so it never shadows the API routes above. Skipped locally
+# when the frontend hasn't been built (`npm run build`).
+if os.path.isdir("frontend/dist"):
+    app.mount("/", StaticFiles(directory="frontend/dist", html=True), name="frontend")

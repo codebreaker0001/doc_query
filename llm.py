@@ -7,8 +7,6 @@ load_dotenv()
 
 client = Groq(api_key=os.environ["GROQ_API_KEY"])
 
-for model in client.models.list().data:
-    print(model.id)
 
 def generate_answer(question: str, context_chunks: list[str]) -> str:
     context = "\n\n".join(context_chunks)

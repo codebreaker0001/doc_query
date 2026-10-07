@@ -1,0 +1,10 @@
+venv/
+.git/
+.env
+data/
+evals/
+frontend/node_modules/
+frontend/dist/
+__pycache__/
+*.pyc
+.deepeval/
