@@ -1,5 +1,8 @@
 import os
+import subprocess
+import sys
 import uuid
+from contextlib import asynccontextmanager
 
 import structlog
 from fastapi import Depends, FastAPI, File, HTTPException, Request , UploadFile
@@ -23,7 +26,27 @@ configure_logging()
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024  # 20MB
 
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Render's free tier has no separate worker process. When enabled, spawn
+    # worker.py as a real subprocess instead -- NOT a thread. A thread would
+    # share this process's async DB engine/connection pool with the worker's
+    # own event loop running in a different OS thread; SQLAlchemy's async
+    # layer bridges to the DB driver via greenlets, which aren't safe to
+    # resume from a different thread than the one that created them, and
+    # that caused jobs to hang indefinitely. A subprocess gets its own
+    # Python interpreter and its own independent db.py module instance, so
+    # there's nothing shared to corrupt.
+    worker_process = None
+    if os.environ.get("ENABLE_EMBEDDED_WORKER") == "true":
+        worker_process = subprocess.Popen([sys.executable, "worker.py"])
+        logger.info("embedded_worker_started", pid=worker_process.pid)
+    yield
+    if worker_process:
+        worker_process.terminate()
+
+
+app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

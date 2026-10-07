@@ -10,20 +10,5 @@ services:
         sync: false
       - key: REDIS_URL
         sync: false
-      - key: TESSERACT_CMD
-        value: ""
-
-  - type: worker
-    name: repo-qa-worker
-    runtime: docker
-    dockerfilePath: ./Dockerfile
-    dockerCommand: python worker.py
-    envVars:
-      - key: DATABASE_URL
-        sync: false
-      - key: GROQ_API_KEY
-        sync: false
-      - key: REDIS_URL
-        sync: false
-      - key: TESSERACT_CMD
-        value: ""
+      - key: ENABLE_EMBEDDED_WORKER
+        value: "true"
