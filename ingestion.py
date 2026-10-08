@@ -12,7 +12,9 @@ from logging_config import logger
 from models import Chunk, Document, IngestionJob, JobStatus
 
 
-async def process_document(job_id: int, tenant_id: int, filename: str, pages: list[str], request_id: str):
+async def process_document(
+    job_id: int, tenant_id: int, filename: str, pages: list[str], request_id: str, redis_client_override=None
+):
     structlog.contextvars.bind_contextvars(request_id=request_id)
     logger.info("processing_started", job_id=job_id, tenant_id=tenant_id)
 
@@ -63,7 +65,7 @@ async def process_document(job_id: int, tenant_id: int, filename: str, pages: li
             job.document_id = document.id
             await session.commit()
 
-            await invalidate_tenant_cache(tenant_id)
+            await invalidate_tenant_cache(tenant_id, client=redis_client_override)
 
         logger.info("processing_finished", job_id=job_id, document_id=document.id, num_chunks=len(chunks_text))
 
@@ -81,20 +83,30 @@ async def process_document(job_id: int, tenant_id: int, filename: str, pages: li
 
 def process_document_sync(job_id: int, tenant_id: int, filename: str, pages: list[str], request_id: str):
     """RQ workers call sync functions; this is the entry point the queue enqueues."""
+    import os
+
+    from redis.asyncio import Redis
+
     from db import engine
-    from redis_client import redis_client
 
     async def run():
+        # A dedicated Redis client for this job, never the shared
+        # redis_client.py singleton -- that singleton is also used by the
+        # main FastAPI event loop (e.g. rate limiting on every request,
+        # including the upload request that enqueued this very job).
+        # redis.asyncio connections are loop-bound; sharing the singleton
+        # across the main thread's loop and this worker thread's loop
+        # caused "Future attached to a different loop" errors.
+        worker_redis = Redis.from_url(os.environ["REDIS_URL"])
         try:
-            await process_document(job_id, tenant_id, filename, pages, request_id)
+            await process_document(job_id, tenant_id, filename, pages, request_id, redis_client_override=worker_redis)
         finally:
-            # Each call gets its own event loop via asyncio.run(). Both the
-            # DB engine and the Redis client are module-level singletons
-            # whose pooled connections are bound to *this* loop, so both
-            # must be reset before it shuts down -- otherwise the next job's
-            # fresh loop inherits dead connections and fails with
-            # "Event loop is closed".
+            # Each call gets its own event loop via asyncio.run(). The DB
+            # engine is a module-level singleton; NullPool (see db.py) means
+            # it has no pooled connections to leak across loops, but
+            # disposing is still cheap insurance. worker_redis is local to
+            # this call, so just close it outright.
             await engine.dispose()
-            await redis_client.connection_pool.disconnect()
+            await worker_redis.aclose()
 
     asyncio.run(run())

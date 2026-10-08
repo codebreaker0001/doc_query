@@ -25,6 +25,7 @@ async def set_cached_answer(tenant_id: int, question: str, result: dict, documen
     await redis_client.set(key, json.dumps(result), ex=CACHE_TTL_SECONDS)
 
 
-async def invalidate_tenant_cache(tenant_id: int):
-    async for key in redis_client.scan_iter(match=f"query_cache:{tenant_id}:*"):
-        await redis_client.delete(key)
+async def invalidate_tenant_cache(tenant_id: int, client=None):
+    client = client or redis_client
+    async for key in client.scan_iter(match=f"query_cache:{tenant_id}:*"):
+        await client.delete(key)
