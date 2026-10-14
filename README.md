@@ -1,4 +1,4 @@
-# repo-qa-service
+# Doc-Query
 
 Multi-tenant RAG backend: upload PDFs, ask questions, get answers grounded in your documents.
 
