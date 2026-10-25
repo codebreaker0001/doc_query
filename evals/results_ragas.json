@@ -1,0 +1,153 @@
+{
+  "What is the main architectural innovation introduced in 'Attention Is All You Need'?": {
+    "evaluated_at": "2026-10-24T14:43:33.161127+00:00",
+    "answer": "I don't know.",
+    "metrics": {
+      "Faithfulness": {
+        "score": 0.0
+      },
+      "Answer Relevancy": {
+        "score": 0.0
+      },
+      "Context Precision": {
+        "score": 0.0
+      },
+      "Context Recall": {
+        "score": 0.0
+      }
+    }
+  },
+  "What pretraining objectives does BERT use?": {
+    "evaluated_at": "2026-10-24T14:43:42.945232+00:00",
+    "answer": "I don't know.",
+    "metrics": {
+      "Faithfulness": {
+        "score": 0.0
+      },
+      "Answer Relevancy": {
+        "score": 0.0
+      },
+      "Context Precision": {
+        "score": 0.0
+      },
+      "Context Recall": {
+        "score": 0.0
+      }
+    }
+  },
+  "How many parameters does the largest GPT-3 model have?": {
+    "evaluated_at": "2026-10-24T14:44:50.366839+00:00",
+    "answer": "The largest GPT\u20113 model contains **175\u202fbillion parameters**.",
+    "metrics": {
+      "Faithfulness": {
+        "score": 1.0
+      },
+      "Answer Relevancy": {
+        "score": 0.9921859457704072
+      },
+      "Context Precision": {
+        "score": 0.9999999999666667
+      },
+      "Context Recall": {
+        "score": 1.0
+      }
+    }
+  },
+  "What problem do ResNet's residual connections solve?": {
+    "evaluated_at": "2026-10-24T14:45:52.472439+00:00",
+    "answer": "ResNet\u2019s shortcut (residual) connections are introduced to solve the **degradation/optimization problem** that appears when networks become very deep.  \nBy allowing each block to learn a residual function (the difference from the identity) rather than the full mapping, the network can be trained more easily, the training error is kept low even for hundreds of layers, and deeper models can actually improve accuracy instead of getting worse.",
+    "metrics": {
+      "Faithfulness": {
+        "score": 0.8333333333333334
+      },
+      "Answer Relevancy": {
+        "score": 0.892888137720973
+      },
+      "Context Precision": {
+        "score": 0.9999999999666667
+      },
+      "Context Recall": {
+        "score": 1.0
+      }
+    }
+  },
+  "What are the key features of the Adam optimization algorithm?": {
+    "evaluated_at": "2026-10-24T14:47:19.894127+00:00",
+    "answer": "**Key features of the Adam optimizer**\n\n| Feature | Description (from the paper) |\n|---------|------------------------------|\n| **First\u2011order, stochastic gradient based** | Uses only the gradient of the objective, suitable for large datasets or high\u2011dimensional parameter spaces. |\n| **Adaptive estimates of first and second moments** | Maintains running averages of gradients (first moment) and squared gradients (second moment) to scale updates automatically. |\n| **Rescaling\u2011invariant** | Parameter updates are invariant to diagonal rescaling of the gradients. |\n| **Memory efficient** | Requires only two additional vectors (for the moment estimates) per parameter, so memory usage is very small. |\n| **Computationally efficient** | Adds only a few arithmetic operations per parameter update. |\n| **Handles sparse gradients** | Works well when many components of the gradient are zero, as in language or recommender\u2011system models. |\n| **Handles non\u2011stationary objectives** | Adapts quickly to changing data distributions or loss functions. |\n| **Step\u2011size control** | Step sizes are roughly bounded by the user\u2011specified hyper\u2011parameter \\( \\alpha \\). |\n| **Implicit step\u2011size annealing** | The adaptive moments naturally anneal the effective step size over time. |\n| **Intuitive hyper\u2011parameters** | \\( \\beta_1, \\beta_2, \\epsilon \\) have clear interpretations and usually need little tuning. |\n| **Variants** | AdaMax is a variant based on the infinity\u2011norm; other connections to AdaGrad and RMSProp are discussed. |\n\nIn short, Adam is a first\u2011order, adaptive, memory\u2011efficient optimizer that is invariant to gradient rescaling, works with sparse and noisy gradients, and requires minimal hyper\u2011parameter tuning.",
+    "metrics": {
+      "Faithfulness": {
+        "score": 0.75
+      },
+      "Answer Relevancy": {
+        "score": 0.9158379168906196
+      },
+      "Context Precision": {
+        "score": 0.9999999999666667
+      },
+      "Context Recall": {
+        "score": 1.0
+      }
+    }
+  },
+  "What does the Retrieval-Augmented Generation (RAG) paper combine?": {
+    "evaluated_at": "2026-10-24T14:49:05.284072+00:00",
+    "answer": "The RAG paper shows how to **blend a parametric, pre\u2011trained seq2seq model with an explicit non\u2011parametric memory** (a dense vector index of Wikipedia accessed via a neural retriever). In other words, it combines the generation flexibility of closed\u2011book (purely parametric) systems with the strong performance of open\u2011book, retrieval\u2011based approaches.",
+    "metrics": {
+      "Faithfulness": {
+        "score": 1.0
+      },
+      "Answer Relevancy": {
+        "score": 0.7599292152354482
+      },
+      "Context Precision": {
+        "score": 0.99999999995
+      },
+      "Context Recall": {
+        "score": 1.0
+      }
+    }
+  },
+  "What is the key idea behind LoRA for fine-tuning large language models?": {
+    "evaluated_at": "2026-10-24T14:50:01.577092+00:00",
+    "answer": "The key idea behind LoRA is to **freeze the original pre\u2011trained weights and add a small, low\u2011rank trainable component to each Transformer layer**.  \nIn practice, LoRA replaces the standard weight matrix\u202f\\(W\\) with a rank\u2011\\(r\\) decomposition \\(W \\leftarrow W + A B\\), where only the two low\u2011rank matrices \\(A\\) and \\(B\\) are updated during training. This keeps the bulk of the model unchanged, drastically reduces the number of trainable parameters, and allows efficient, low\u2011latency fine\u2011tuning for downstream tasks.",
+    "metrics": {
+      "Faithfulness": {
+        "score": 0.8571428571428571
+      },
+      "Answer Relevancy": {
+        "score": null,
+        "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01kv0hxcwefwy8swt0gbzez1s4` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199089, Requested 2740. Please try again in 13m10.128s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}"
+      },
+      "Context Precision": {
+        "score": null,
+        "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01kv0hxcwefwy8swt0gbzez1s4` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 198954, Requested 2096. Please try again in 7m33.6s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}"
+      },
+      "Context Recall": {
+        "score": null,
+        "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01kv0hxcwefwy8swt0gbzez1s4` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 198689, Requested 3164. Please try again in 13m20.496s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}"
+      }
+    }
+  },
+  "What method does InstructGPT use to align language models with human intent?": {
+    "evaluated_at": "2026-10-24T14:56:05.627631+00:00",
+    "answer": "InstructGPT aligns language models with human intent by **fine\u2011tuning GPT\u20113 with human feedback**.  \n\nFirst, it trains a supervised model on a dataset of labeler\u2011written demonstrations of the desired behavior.  \nThen it gathers human rankings of model outputs and trains a reward model to predict these preferences.  \nFinally, it uses **reinforcement learning from human feedback (RLHF)**\u2014specifically PPO\u2014to fine\u2011tune the supervised model so it maximizes the learned reward. This two\u2011step process (supervised fine\u2011tuning + RLHF) aligns the model with the specified human intent.",
+    "metrics": {
+      "Faithfulness": {
+        "score": null,
+        "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01kv0hxcwefwy8swt0gbzez1s4` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199603, Requested 2554. Please try again in 15m31.824s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}"
+      },
+      "Answer Relevancy": {
+        "score": null,
+        "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01kv0hxcwefwy8swt0gbzez1s4` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199323, Requested 898. Please try again in 1m35.472s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}"
+      },
+      "Context Precision": {
+        "score": null,
+        "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01kv0hxcwefwy8swt0gbzez1s4` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199041, Requested 1640. Please try again in 4m54.192s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}"
+      },
+      "Context Recall": {
+        "score": null,
+        "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01kv0hxcwefwy8swt0gbzez1s4` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 198761, Requested 2512. Please try again in 9m9.936s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}"
+      }
+    }
+  }
+}

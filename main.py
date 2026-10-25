@@ -1,3 +1,4 @@
+import asyncio
 import os
 import threading
 import uuid
@@ -25,6 +26,24 @@ from sqlalchemy import select
 configure_logging()
 
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024  # 20MB
+UPLOAD_READ_CHUNK = 1024 * 1024
+
+
+async def _read_upload_capped(file: UploadFile, max_bytes: int) -> bytes:
+    """Reads in chunks so an upload with no/false Content-Length can't be
+    buffered unbounded into memory -- aborts as soon as the running total
+    passes max_bytes instead of trusting the header alone."""
+    chunks = []
+    total = 0
+    while True:
+        chunk = await file.read(UPLOAD_READ_CHUNK)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > max_bytes:
+            raise HTTPException(status_code=413, detail="File too large (max 20MB)")
+        chunks.append(chunk)
+    return b"".join(chunks)
 
 
 class ThreadWorker(SimpleWorker):
@@ -58,8 +77,7 @@ async def lifespan(app: FastAPI):
         thread.start()
         logger.info("embedded_worker_started")
     yield
-    if worker_process:
-        worker_process.terminate()
+    # thread is a daemon -- it dies with the process, nothing to terminate
 
 
 app = FastAPI(lifespan=lifespan)
@@ -126,7 +144,10 @@ async def upload_document(
     if content_length and int(content_length) > MAX_UPLOAD_BYTES:
         raise HTTPException(status_code=413, detail="File too large (max 20MB)")
 
-    file_bytes = await file.read()
+    file_bytes = await _read_upload_capped(file, MAX_UPLOAD_BYTES)
+    if not file_bytes.startswith(b"%PDF"):
+        raise HTTPException(status_code=400, detail="Only PDF files are supported")
+
     pages = extract_pages_from_pdf(file_bytes)
 
     if not any(page.strip() for page in pages):
@@ -172,7 +193,7 @@ async def query_documents(request: QueryRequest, tenant: Tenant = Depends(get_ra
     logger.info("query_cache_miss", tenant_id=tenant.id)
 
     chunks = await retrieve_relevant_chunks(request.question, tenant_id=tenant.id, document_id=request.document_id)
-    answer = generate_answer(request.question, chunks)
+    answer = await asyncio.to_thread(generate_answer, request.question, chunks)
     result = {"answer": answer, "chunks_used": chunks}
 
     await set_cached_answer(tenant.id, request.question, result, request.document_id)

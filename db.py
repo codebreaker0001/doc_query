@@ -5,12 +5,14 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.pool import NullPool
 from contextlib import asynccontextmanager
-from sqlalchemy import text
 
+# tenant_id isn't used for a DB-level setting here -- there's no Postgres
+# RLS policy in this project, so tenant isolation is entirely the explicit
+# `.where(tenant_id == ...)` filter on every query. This is just a plain
+# session; the tenant_id param stays so call sites read as tenant-scoped.
 @asynccontextmanager
 async def tenant_session(tenant_id: int):
     async with async_session() as session:
-        await session.execute(text(f"SET LOCAL app.tenant_id = '{tenant_id}'"))
         yield session
 
 
