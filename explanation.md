@@ -1,4 +1,4 @@
-# repo-qa-service — How It Works, What's Broken, What's Missing for Production
+# Doc-Query — How It Works, What's Broken, What's Missing for Production
 
 ## 1. What this project is
 
